@@ -1,4 +1,4 @@
-package sorting.api.packages.deleted;
+package sorting.api.codedaddress;
 
 import lombok.Data;
 import org.hibernate.annotations.GenericGenerator;
@@ -6,20 +6,13 @@ import org.hibernate.annotations.GenericGenerator;
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
-import javax.persistence.Table;
-import java.util.Date;
 
-@Table(name="package_deleted")
 @Entity
 @Data
-public class DeletedPackage {
+public class CodedAddress {
     @Id
     @GenericGenerator(name = "idGenerator", strategy = "assigned")
     @GeneratedValue(generator = "idGenerator")
     private String code;
-    private String destCode;
-    private Date createAt;
-    private Long creator;
-    private Date deleteAt;
-    private Long operator;
+    private String address;
 }

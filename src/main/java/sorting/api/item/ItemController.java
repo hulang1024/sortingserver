@@ -5,6 +5,8 @@ import com.querydsl.jpa.impl.JPAQueryFactory;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+import sorting.api.codedaddress.CodedAddress;
+import sorting.api.codedaddress.CodedAddressRepo;
 import sorting.api.common.Page;
 import sorting.api.common.PageParams;
 import sorting.api.common.PageUtils;
@@ -18,6 +20,8 @@ import java.util.Map;
 public class ItemController {
     @Autowired
     private ItemRepo itemRepo;
+    @Autowired
+    private CodedAddressRepo codedAddressRepo;
     @Autowired
     private EntityManager entityManager;
 
@@ -38,7 +42,12 @@ public class ItemController {
         Map<String, Object> details = new HashMap<>();
 
         Item item = itemRepo.findById(code).get();
-        details.put("package", item);
+        details.put("item", item);
+
+        CodedAddress address = codedAddressRepo.findById(item.getDestCode()).orElse(null);
+        if (address != null) {
+            details.put("destAddress", address);
+        }
 
         return details;
     }

@@ -5,6 +5,8 @@ import com.querydsl.jpa.impl.JPAQueryFactory;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+import sorting.api.codedaddress.CodedAddress;
+import sorting.api.codedaddress.CodedAddressRepo;
 import sorting.api.common.Page;
 import sorting.api.common.PageParams;
 import sorting.api.common.PageUtils;
@@ -28,6 +30,8 @@ public class PackageController {
     private PackageRepo packageRepo;
     @Autowired
     private UserRepo userRepo;
+    @Autowired
+    private CodedAddressRepo codedAddressRepo;
     @Autowired
     private EntityManager entityManager;
 
@@ -56,6 +60,11 @@ public class PackageController {
         User operator = userRepo.findById(pkg.getOperator()).get();
         details.put("creator", operator);
 
+        CodedAddress address = codedAddressRepo.findById(pkg.getDestCode()).orElse(null);
+        if (address != null) {
+            details.put("destAddress", address);
+        }
+
         QPackageItemRel qPackageItemRel = QPackageItemRel.packageItemRel;
         QItem qItem = QItem.item;
         List<Item> items = new JPAQuery<Item>(entityManager)
@@ -74,6 +83,9 @@ public class PackageController {
     public Result add(@RequestBody Package pkg) {
         if (packageRepo.existsById(pkg.getCode())) {
             return Result.fail().message("包裹编号重复");
+        }
+        if (!codedAddressRepo.existsById(pkg.getDestCode())) {
+            return Result.fail().message("目的地编号不存在");
         }
         pkg.setOperator(SessionUserUtils.getUser().getId());
         pkg.setCreateAt(new Date());
