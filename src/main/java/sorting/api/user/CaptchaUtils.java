@@ -1,10 +1,7 @@
 package sorting.api.user;
 
-import javax.imageio.ImageIO;
-import javax.servlet.http.HttpServletResponse;
 import java.awt.*;
 import java.awt.image.BufferedImage;
-import java.io.OutputStream;
 import java.util.Random;
 
 public class CaptchaUtils {
@@ -15,16 +12,15 @@ public class CaptchaUtils {
         graphics.setFont(new Font("微软雅黑", Font.BOLD, 40));
         //数字和字母的组合
         String baseNumLetter = "123456789";
-        StringBuffer sBuffer = new StringBuffer();
+        StringBuilder sBuffer = new StringBuilder();
         int x = 10;  //旋转原点的 x 坐标
-        String ch = "";
         Random random = new Random();
         for (int i = 0; i < 4; i++) {
             graphics.setColor(getRandomColor());
             //设置字体旋转角度
             int degree = random.nextInt() % 30;  //角度小于30度
             int dot = random.nextInt(baseNumLetter.length());
-            ch = baseNumLetter.charAt(dot) + "";
+            String ch = baseNumLetter.charAt(dot) + "";
             sBuffer.append(ch);
             //正向旋转
             graphics.rotate(degree * Math.PI / 180, x, 45);
@@ -61,8 +57,7 @@ public class CaptchaUtils {
      */
     private static Color getRandomColor() {
         Random ran = new Random();
-        Color color = new Color(ran.nextInt(256), ran.nextInt(256), ran.nextInt(256));
-        return color;
+        return new Color(ran.nextInt(256), ran.nextInt(256), ran.nextInt(256));
     }
 
 }

@@ -16,7 +16,7 @@ public class RequestValidateInterceptor implements HandlerInterceptor {
     private String[] whiteList = new String[]{
             "/error",
             "/user/login", "/user/logout", "/user/register",
-            "/user/login_captcha", "/user/validate_login_captcha", "/user/notloggedin"
+            "/user/login_captcha", "/user/validate_login_captcha", "/user/not_logged_in"
     };
 
     @Override
@@ -29,7 +29,7 @@ public class RequestValidateInterceptor implements HandlerInterceptor {
 
         Object user = request.getSession().getAttribute(Constants.SESSION_USER_KEY);
         if(user == null) {
-            request.getRequestDispatcher("/user/notloggedin").forward(request, response);
+            request.getRequestDispatcher("/user/not_logged_in").forward(request, response);
             return false;
         }
         return true;

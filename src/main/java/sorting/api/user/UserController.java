@@ -32,7 +32,7 @@ public class UserController {
             return Result.fail(2).message("验证码错误");
         }
         Optional<User> userOpt = userRepo.findByPhone(username);
-        if (userOpt.isEmpty()) {
+        if (!userOpt.isPresent()) {
             return Result.fail(3).message("用户名不存在");
         }
         if (!PasswordUtils.isRight(password, userOpt.get().getPassword())) {
@@ -47,8 +47,10 @@ public class UserController {
 
 
     @GetMapping("/login_captcha")
-    public void captcha(int width, int height, HttpServletResponse response, HttpSession session) {
+    public void captcha(Integer width, Integer height, HttpServletResponse response, HttpSession session) {
         try {
+            width = width != null ? width : 160;
+            height = height != null ? height : 50;
             BufferedImage captchaImage = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
             String randomText = CaptchaUtils.drawRandomText(width, height, captchaImage);
             session.setAttribute("login_captcha", randomText);
@@ -87,7 +89,7 @@ public class UserController {
         return Result.from(user != null);
     }
 
-    @GetMapping("/notloggedin")
+    @GetMapping("/not_logged_in")
     public Result notLoggedIn() {
         return Result.fail().message("未登录，无效的请求");
     }

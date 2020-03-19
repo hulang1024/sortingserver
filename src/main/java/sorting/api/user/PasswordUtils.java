@@ -1,13 +1,11 @@
 package sorting.api.user;
 
-import sorting.api.common.Result;
-
 import java.math.BigInteger;
 import java.security.MessageDigest;
 
 public class PasswordUtils {
     public static boolean isRight(String userInput, String ciphertext) {
-        return ciphertext(userInput).equals(ciphertext);
+        return ciphertext.equals(ciphertext(userInput));
     }
 
     public static String ciphertext(String str) {

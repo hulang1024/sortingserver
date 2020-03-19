@@ -4,16 +4,16 @@ spring:
   datasource:
     username: root
     password: 123456
-    url: jdbc:mysql://127.0.0.1:3306/sorting
-    driver-class-name: com.mysql.jdbc.Driver
+    url: jdbc:mysql://127.0.0.1:3306/sorting?serverTimezone=GMT%2B8
+    driver-class-name: com.mysql.cj.jdbc.Driver
   jpa:
     properties:
       hibernate:
         jdbc:
-          time-zone: GMT+8
+          time-zone: 'GMT+8'
   jackson:
     date-format: yyyy-MM-dd HH:mm:ss
-    time-zone: GMT+8
+    time-zone: 'GMT+8'
 
 server:
   port: 9999

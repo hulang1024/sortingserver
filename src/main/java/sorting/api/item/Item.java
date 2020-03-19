@@ -1,4 +1,4 @@
-package sorting.api.packages;
+package sorting.api.item;
 
 import lombok.Data;
 import org.hibernate.annotations.GenericGenerator;
@@ -10,12 +10,12 @@ import java.util.Date;
 
 @Entity
 @Data
-public class Package {
+public class Item {
     @Id
     @GenericGenerator(name = "idGenerator", strategy = "assigned")
     @GeneratedValue(generator = "idGenerator")
     private String code;
     private String destCode;
     private Date createAt;
-    private Long operator;
+    private Date packTime;
 }

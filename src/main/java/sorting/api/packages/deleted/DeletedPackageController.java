@@ -1,9 +1,10 @@
-package sorting.api.packages;
+package sorting.api.packages.deleted;
 
 import com.querydsl.jpa.impl.JPAQuery;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import sorting.api.common.Page;
 import sorting.api.common.PageParams;
@@ -11,21 +12,24 @@ import sorting.api.common.PageUtils;
 import sorting.api.common.Result;
 import sorting.api.item.Item;
 import sorting.api.item.QItem;
+import sorting.api.packages.*;
+import sorting.api.packages.Package;
 import sorting.api.user.SessionUserUtils;
 import sorting.api.user.User;
 import sorting.api.user.UserRepo;
 
 import javax.persistence.EntityManager;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
-@RequestMapping("/package")
+@RequestMapping("/deleted_package")
 @RestController
-public class PackageController {
+public class DeletedPackageController {
     @Autowired
     private PackageRepo packageRepo;
+    @Autowired
+    private PackageItemRelRepo packageItemRelRepo;
+    @Autowired
+    private DeletedPackageRepo deletedPackageRepo;
     @Autowired
     private UserRepo userRepo;
     @Autowired
@@ -33,7 +37,7 @@ public class PackageController {
 
     @GetMapping("/page")
     public Page<Package> queryPage(@RequestParam Map<String, String> params, PageParams pageParams) {
-        QPackage qPackage = QPackage.package$;
+        QDeletedPackage qPackage = QDeletedPackage.deletedPackage;
         JPAQuery<?> query = new JPAQueryFactory(entityManager).selectFrom(qPackage);
 
         if (!StringUtils.equals(params.get("fromAll"), "1")) {
@@ -50,40 +54,32 @@ public class PackageController {
     public Map<String, Object> queryPackageDetails(String code) {
         Map<String, Object> details = new HashMap<>();
 
-        Package pkg = packageRepo.findById(code).get();
+        DeletedPackage pkg = deletedPackageRepo.findById(code).get();
         details.put("package", pkg);
 
-        User operator = userRepo.findById(pkg.getOperator()).get();
-        details.put("creator", operator);
-
-        QPackageItemRel qPackageItemRel = QPackageItemRel.packageItemRel;
-        QItem qItem = QItem.item;
-        List<Item> items = new JPAQuery<Item>(entityManager)
-            .select(qItem)
-            .from(qItem, qPackageItemRel)
-            .where(qPackageItemRel.itemCode.eq(qItem.code))
-            .where(qPackageItemRel.packageCode.eq(code))
-            .fetchResults()
-            .getResults();
-        details.put("items", items);
-
+        User creator = userRepo.findById(pkg.getOperator()).get();
+        details.put("creator", creator);
+        User deleteOperator = userRepo.findById(pkg.getOperator()).get();
+        details.put("deleteOperator", deleteOperator);
         return details;
     }
 
+    @Transactional
     @PostMapping
-    public Result add(@RequestBody Package pkg) {
-        if (packageRepo.existsById(pkg.getCode())) {
-            return Result.fail().message("包裹编号重复");
+    public Result add(String code) {
+        Optional<Package> pkgOpt = packageRepo.findById(code);
+        if (!pkgOpt.isPresent()) {
+            return Result.fail().message("不存在的包裹");
         }
-        pkg.setOperator(SessionUserUtils.getUser().getId());
-        pkg.setCreateAt(new Date());
-        pkg = packageRepo.save(pkg);
-        return Result.from(pkg != null);
-    }
-
-    @DeleteMapping
-    public Result delete(@RequestBody Package pkg) {
-        packageRepo.delete(pkg);
-        return Result.ok();
+        Package pkg = pkgOpt.get();
+        packageItemRelRepo.deleteByPackageCode(code);
+        DeletedPackage deletedPackage = new DeletedPackage();
+        deletedPackage.setCode(pkg.getCode());
+        deletedPackage.setDestCode(pkg.getDestCode());
+        deletedPackage.setCreator(pkg.getOperator());
+        deletedPackage.setOperator(SessionUserUtils.getUser().getId());
+        deletedPackage.setCreateAt(new Date());
+        deletedPackage = deletedPackageRepo.save(deletedPackage);
+        return Result.from(deletedPackage != null);
     }
 }
