@@ -40,14 +40,9 @@ public class ItemController {
     @GetMapping("/details")
     public Map<String, Object> queryItemDetails(String code) {
         Map<String, Object> details = new HashMap<>();
-
         Item item = itemRepo.findById(code).get();
         details.put("item", item);
-
-        CodedAddress address = codedAddressRepo.findById(item.getDestCode()).orElse(null);
-        if (address != null) {
-            details.put("destAddress", address);
-        }
+        codedAddressRepo.findById(item.getDestCode()).ifPresent(address -> details.put("destAddress", address));
 
         return details;
     }

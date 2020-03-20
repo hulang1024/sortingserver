@@ -15,7 +15,7 @@ import javax.servlet.http.HttpServletResponse;
 public class RequestValidateInterceptor implements HandlerInterceptor {
     private String[] whiteList = new String[]{
             "/error",
-            "/user/login", "/user/logout", "/user/register",
+            "/user/next_code", "/user/login", "/user/logout", "/user/register",
             "/user/login_captcha", "/user/validate_login_captcha", "/user/not_logged_in"
     };
 

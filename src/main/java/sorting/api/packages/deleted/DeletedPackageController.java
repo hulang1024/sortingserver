@@ -6,6 +6,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
+import sorting.api.codedaddress.CodedAddressRepo;
 import sorting.api.common.Page;
 import sorting.api.common.PageParams;
 import sorting.api.common.PageUtils;
@@ -30,6 +31,8 @@ public class DeletedPackageController {
     private PackageItemRelRepo packageItemRelRepo;
     @Autowired
     private DeletedPackageRepo deletedPackageRepo;
+    @Autowired
+    private CodedAddressRepo codedAddressRepo;
     @Autowired
     private UserRepo userRepo;
     @Autowired
@@ -56,11 +59,10 @@ public class DeletedPackageController {
 
         DeletedPackage pkg = deletedPackageRepo.findById(code).get();
         details.put("package", pkg);
+        userRepo.findById(pkg.getOperator()).ifPresent(user -> details.put("creator", user));
+        codedAddressRepo.findById(pkg.getDestCode()).ifPresent(address -> details.put("destAddress", address));
+        userRepo.findById(pkg.getOperator()).ifPresent(user -> details.put("deleteOperator", user));
 
-        User creator = userRepo.findById(pkg.getOperator()).get();
-        details.put("creator", creator);
-        User deleteOperator = userRepo.findById(pkg.getOperator()).get();
-        details.put("deleteOperator", deleteOperator);
         return details;
     }
 

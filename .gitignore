@@ -12,7 +12,8 @@
 # IntelliJ related
 *.ipr
 *.iws
-.idea/
+.idea/*.xml
 
 
 target/
+out/

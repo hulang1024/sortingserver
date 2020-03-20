@@ -1,6 +1,7 @@
 package sorting.api.user;
 
 import lombok.Data;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import sorting.api.common.Constants;
@@ -31,7 +32,7 @@ public class UserController {
         if (validateCaptcha(captcha, session).getCode() != 0) {
             return Result.fail(2).message("验证码错误");
         }
-        Optional<User> userOpt = userRepo.findByPhone(username);
+        Optional<User> userOpt = userRepo.findByPhoneOrCode(username, username);
         if (!userOpt.isPresent()) {
             return Result.fail(3).message("用户名不存在");
         }
@@ -42,6 +43,7 @@ public class UserController {
         User user = userOpt.get();
         session.setAttribute(Constants.SESSION_USER_KEY, user);
         session.setMaxInactiveInterval(60 * 60 * 12);
+
         return Result.ok(user);
     }
 
@@ -74,6 +76,16 @@ public class UserController {
         return Result.ok();
     }
 
+    @GetMapping("/next_code")
+    public String genNextCode() {
+        return userRepo.findTopByOrderByCreateAtDesc()
+            .map(user -> {
+                int nextNum = Integer.parseInt(user.getCode()) + 1;
+                return StringUtils.leftPad(String.valueOf(nextNum), 4, "0");
+            })
+            .orElse("0001");
+    }
+
     /**
      * 注册
      * @param user 注册用户信息
@@ -82,6 +94,9 @@ public class UserController {
     public Result register(@RequestBody User user) {
         if (userRepo.existsByPhone(user.getPhone())) {
             return Result.fail().message("手机号已被注册");
+        }
+        if (userRepo.existsByCode(user.getCode())) {
+            return Result.fail().message("编号已存在");
         }
         user.setPassword(PasswordUtils.ciphertext(user.getPassword()));
         user.setCreateAt(new Date());
