@@ -3,6 +3,7 @@ package sorting.api.user;
 import lombok.Data;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import sorting.api.common.Constants;
 import sorting.api.common.Result;
@@ -13,6 +14,8 @@ import javax.servlet.http.HttpSession;
 import java.awt.image.BufferedImage;
 import java.io.OutputStream;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 
 @RequestMapping("/user")
@@ -47,6 +50,12 @@ public class UserController {
         return Result.ok(user);
     }
 
+    @PostMapping("/session")
+    public Result session(HttpSession session) {
+        Map<String, Object> ret = new HashMap<>();
+        ret.put("user", session.getAttribute(Constants.SESSION_USER_KEY));
+        return Result.ok(ret);
+    }
 
     @GetMapping("/login_captcha")
     public void captcha(Integer width, Integer height, HttpServletResponse response, HttpSession session) {
@@ -105,7 +114,13 @@ public class UserController {
     }
 
     @GetMapping("/not_logged_in")
+    @ResponseStatus(code= HttpStatus.UNAUTHORIZED)
     public Result notLoggedIn() {
         return Result.fail().message("未登录，无效的请求");
+    }
+
+    @GetMapping("/ping")
+    public String ping() {
+        return "pong";
     }
 }

@@ -1,5 +1,6 @@
 package sorting.api.item;
 
+import com.querydsl.core.types.Projections;
 import com.querydsl.jpa.impl.JPAQuery;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import org.apache.commons.lang3.StringUtils;
@@ -7,9 +8,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import sorting.api.codedaddress.CodedAddress;
 import sorting.api.codedaddress.CodedAddressRepo;
+import sorting.api.codedaddress.QCodedAddress;
 import sorting.api.common.Page;
 import sorting.api.common.PageParams;
 import sorting.api.common.PageUtils;
+import sorting.api.packages.PackageInfo;
 
 import javax.persistence.EntityManager;
 import java.util.HashMap;
@@ -26,9 +29,17 @@ public class ItemController {
     private EntityManager entityManager;
 
     @GetMapping("/page")
-    public Page<Item> queryPage(@RequestParam Map<String, String> params, PageParams pageParams) {
+    public Page<ItemInfo> queryPage(@RequestParam Map<String, String> params, PageParams pageParams) {
         QItem qItem = QItem.item;
-        JPAQuery<?> query = new JPAQueryFactory(entityManager).selectFrom(qItem);
+        QCodedAddress qCodedAddress = QCodedAddress.codedAddress;
+
+        JPAQuery<?> query = new JPAQuery<>(entityManager)
+            .select(Projections.bean(
+                PackageInfo.class,
+                qItem.code, qItem.destCode, qItem.createAt,
+                qCodedAddress.address.as("destAddress")))
+            .from(qItem, qCodedAddress)
+            .where(qItem.destCode.eq(qCodedAddress.code));
 
         if (StringUtils.isNotEmpty(params.get("code"))) {
             query.where(qItem.code.like(params.get("code") + "%"));

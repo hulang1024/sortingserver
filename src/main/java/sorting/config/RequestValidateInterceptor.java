@@ -13,17 +13,17 @@ import javax.servlet.http.HttpServletResponse;
  * 验证请求是否有效的拦截器
  */
 public class RequestValidateInterceptor implements HandlerInterceptor {
-    private String[] whiteList = new String[]{
+    private final String[] WHITE_LIST = new String[]{
             "/error",
             "/user/next_code", "/user/login", "/user/logout", "/user/register",
-            "/user/login_captcha", "/user/validate_login_captcha", "/user/not_logged_in"
+            "/user/login_captcha", "/user/validate_login_captcha", "/user/not_logged_in", "/user/ping"
     };
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object o) throws Exception {
         // 会话是否有效
 
-        if (ArrayUtils.contains(whiteList, request.getRequestURI())) {
+        if (ArrayUtils.contains(WHITE_LIST, request.getRequestURI())) {
             return true;
         }
 
