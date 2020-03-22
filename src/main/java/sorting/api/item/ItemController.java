@@ -2,17 +2,18 @@ package sorting.api.item;
 
 import com.querydsl.core.types.Projections;
 import com.querydsl.jpa.impl.JPAQuery;
-import com.querydsl.jpa.impl.JPAQueryFactory;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.*;
-import sorting.api.codedaddress.CodedAddress;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 import sorting.api.codedaddress.CodedAddressRepo;
 import sorting.api.codedaddress.QCodedAddress;
 import sorting.api.common.Page;
 import sorting.api.common.PageParams;
 import sorting.api.common.PageUtils;
-import sorting.api.packages.PackageInfo;
+import sorting.api.packageitem.PackageItemRelRepo;
 
 import javax.persistence.EntityManager;
 import java.util.HashMap;
@@ -23,6 +24,8 @@ import java.util.Map;
 public class ItemController {
     @Autowired
     private ItemRepo itemRepo;
+    @Autowired
+    private PackageItemRelRepo packageItemRelRepo;
     @Autowired
     private CodedAddressRepo codedAddressRepo;
     @Autowired
@@ -35,8 +38,8 @@ public class ItemController {
 
         JPAQuery<?> query = new JPAQuery<>(entityManager)
             .select(Projections.bean(
-                PackageInfo.class,
-                qItem.code, qItem.destCode, qItem.createAt,
+                ItemInfo.class,
+                qItem.code, qItem.destCode, qItem.createAt, qItem.packTime,
                 qCodedAddress.address.as("destAddress")))
             .from(qItem, qCodedAddress)
             .where(qItem.destCode.eq(qCodedAddress.code));
@@ -54,6 +57,9 @@ public class ItemController {
         Item item = itemRepo.findById(code).get();
         details.put("item", item);
         codedAddressRepo.findById(item.getDestCode()).ifPresent(address -> details.put("destAddress", address));
+        if (item.getPackTime() != null) {
+            packageItemRelRepo.findByItemCode(code).ifPresent(rel -> details.put("packageCode", rel.getPackageCode()));
+        }
 
         return details;
     }

@@ -2,7 +2,6 @@ package sorting.api.common;
 
 import com.querydsl.core.QueryResults;
 import com.querydsl.jpa.impl.JPAQuery;
-import org.springframework.data.domain.PageRequest;
 
 import java.util.List;
 

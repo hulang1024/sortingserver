@@ -16,7 +16,8 @@ public class RequestValidateInterceptor implements HandlerInterceptor {
     private final String[] WHITE_LIST = new String[]{
             "/error",
             "/user/next_code", "/user/login", "/user/logout", "/user/register",
-            "/user/login_captcha", "/user/validate_login_captcha", "/user/not_logged_in", "/user/ping"
+            "/user/login_captcha", "/user/not_logged_in", "/user/ping",
+            "/scheme/all"
     };
 
     @Override

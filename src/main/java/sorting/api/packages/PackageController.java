@@ -14,7 +14,10 @@ import sorting.api.common.PageParams;
 import sorting.api.common.PageUtils;
 import sorting.api.common.Result;
 import sorting.api.item.Item;
+import sorting.api.item.ItemRepo;
 import sorting.api.item.QItem;
+import sorting.api.packageitem.*;
+import sorting.api.packageitem.QPackageItemRel;
 import sorting.api.packages.deleted.DeletedPackage;
 import sorting.api.packages.deleted.DeletedPackageRepo;
 import sorting.api.user.QUser;
@@ -30,9 +33,13 @@ public class PackageController {
     @Autowired
     private PackageRepo packageRepo;
     @Autowired
+    private ItemRepo itemRepo;
+    @Autowired
     private UserRepo userRepo;
     @Autowired
     private PackageItemRelRepo packageItemRelRepo;
+    @Autowired
+    private PackageItemOpRepo packageItemOpRepo;
     @Autowired
     private DeletedPackageRepo deletedPackageRepo;
     @Autowired
@@ -89,17 +96,62 @@ public class PackageController {
     }
 
     @PostMapping
-    public Result add(@RequestBody Package pkg) {
+    public Result add(@RequestBody Package pkg, SmartCreateSepc smartCreateSpec, Long schemeId) {
         if (packageRepo.existsById(pkg.getCode())) {
-            return Result.fail().message("包裹编号重复");
+            return Result.fail().message("早已创建包裹");
         }
         if (!codedAddressRepo.existsById(pkg.getDestCode())) {
             return Result.fail().message("未查询到目的地");
         }
+
         pkg.setOperator(SessionUserUtils.getUser().getId());
         pkg.setCreateAt(new Date());
         pkg = packageRepo.save(pkg);
+
+        if (pkg != null && smartCreateSpec.isSmartCreate()) {
+            smartAllocItems(pkg, smartCreateSpec);
+        }
+
         return Result.from(pkg != null);
+    }
+
+    @Transactional
+    public Result smartAllocItems(Package pkg, SmartCreateSepc smartCreateSpec) {
+        // 查询出相同目的地并且还未分配的快件
+        QItem qItem = QItem.item;
+        List<Item> items = new JPAQueryFactory(entityManager).selectFrom(qItem)
+            .where(qItem.packTime.isNull().and(qItem.destCode.eq(pkg.getDestCode())))
+            .offset(0)
+            .limit(smartCreateSpec.getAllocItemNumMax())
+            .fetchResults()
+            .getResults();
+
+        Date now = new Date();
+        long operator = SessionUserUtils.getUser().getId();
+        List<PackageItemRel> rels = new ArrayList<>();  // 包裹快件关联记录
+        List<PackageItemOp> opRecords = new ArrayList<>(); //包裹增加快件记录
+        for (Item item : items) {
+            item.setPackTime(now);
+
+            PackageItemRel rel = new PackageItemRel();
+            rel.setPackageCode(pkg.getCode());
+            rel.setItemCode(item.getCode());
+            rel.setOperator(operator);
+            rel.setCreateAt(now);
+            rels.add(rel);
+
+            PackageItemOp op = new PackageItemOp();
+            op.setPackageCode(pkg.getCode());
+            op.setItemCode(item.getCode());
+            op.setOperator(operator);
+            op.setOpTime(now);
+            op.setOpType(1);
+            opRecords.add(op);
+        }
+        packageItemRelRepo.saveAll(rels);
+        packageItemOpRepo.saveAll(opRecords);
+        itemRepo.saveAll(items);
+        return Result.ok();
     }
 
     @Transactional

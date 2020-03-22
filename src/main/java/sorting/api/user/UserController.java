@@ -1,6 +1,5 @@
 package sorting.api.user;
 
-import lombok.Data;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -32,7 +31,8 @@ public class UserController {
      */
     @PostMapping("/login")
     public Result login(String username, String password, String captcha, HttpSession session) {
-        if (validateCaptcha(captcha, session).getCode() != 0) {
+        String sessionCaptcha = (String)session.getAttribute("login_captcha");
+        if (!(sessionCaptcha != null && sessionCaptcha.equals(captcha))) {
             return Result.fail(2).message("验证码错误");
         }
         Optional<User> userOpt = userRepo.findByPhoneOrCode(username, username);
@@ -50,11 +50,11 @@ public class UserController {
         return Result.ok(user);
     }
 
-    @PostMapping("/session")
-    public Result session(HttpSession session) {
+    @GetMapping("/session")
+    public Map<String, Object> session(HttpSession session) {
         Map<String, Object> ret = new HashMap<>();
         ret.put("user", session.getAttribute(Constants.SESSION_USER_KEY));
-        return Result.ok(ret);
+        return ret;
     }
 
     @GetMapping("/login_captcha")
@@ -71,12 +71,6 @@ public class UserController {
             out.flush();
             out.close();
         } catch (Exception e) { e.printStackTrace(); }
-    }
-
-    @GetMapping("/validate_login_captcha")
-    public Result validateCaptcha(String captcha, HttpSession session) {
-        String sessionCaptcha = (String)session.getAttribute("login_captcha");
-        return Result.from(sessionCaptcha != null && sessionCaptcha.equals(captcha));
     }
 
     @PostMapping("/logout")
