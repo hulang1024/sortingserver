@@ -29,7 +29,7 @@ public class DeletedPackageController {
     private EntityManager entityManager;
 
     @GetMapping("/page")
-    public Page<Package> queryPage(@RequestParam Map<String, String> params, PageParams pageParams) {
+    public Page<DeletedPackage> queryPage(@RequestParam Map<String, String> params, PageParams pageParams) {
         QDeletedPackage qPackage = QDeletedPackage.deletedPackage;
         JPAQuery<?> query = new JPAQueryFactory(entityManager).selectFrom(qPackage);
 

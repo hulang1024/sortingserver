@@ -1,6 +1,7 @@
 package sorting.api.item;
 
 import com.querydsl.core.types.Projections;
+import com.querydsl.core.types.dsl.Expressions;
 import com.querydsl.jpa.impl.JPAQuery;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,6 +15,7 @@ import sorting.api.common.Page;
 import sorting.api.common.PageParams;
 import sorting.api.common.PageUtils;
 import sorting.api.packageitem.PackageItemRelRepo;
+import sorting.api.packageitem.QPackageItemRel;
 
 import javax.persistence.EntityManager;
 import java.util.HashMap;
@@ -35,15 +37,22 @@ public class ItemController {
     public Page<ItemInfo> queryPage(@RequestParam Map<String, String> params, PageParams pageParams) {
         QItem qItem = QItem.item;
         QCodedAddress qCodedAddress = QCodedAddress.codedAddress;
+        QPackageItemRel qPackageItemRel = QPackageItemRel.packageItemRel;
 
         JPAQuery<?> query = new JPAQuery<>(entityManager)
             .select(Projections.bean(
                 ItemInfo.class,
                 qItem.code, qItem.destCode, qItem.createAt, qItem.packTime,
                 qCodedAddress.address.as("destAddress")))
-            .from(qItem, qCodedAddress)
-            .where(qItem.destCode.eq(qCodedAddress.code));
+            .from(qItem, qCodedAddress);
 
+        if (StringUtils.isNotEmpty(params.get("packageCode"))) {
+            query
+                .from(qPackageItemRel)
+                .where(qPackageItemRel.itemCode.eq(qItem.code)
+                .and(qPackageItemRel.packageCode.eq(params.get("packageCode"))));
+        }
+        query.where(qItem.destCode.eq(qCodedAddress.code));
         if (StringUtils.isNotEmpty(params.get("code"))) {
             query.where(qItem.code.like(params.get("code") + "%"));
         }

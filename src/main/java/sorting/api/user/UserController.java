@@ -107,6 +107,21 @@ public class UserController {
         return Result.from(user != null);
     }
 
+    @PutMapping("/password")
+    public Result modifyPassword(String oldPassword, String newPassword) {
+        Optional<User> userOpt = userRepo.findById(SessionUserUtils.getUser().getId());
+        if (!userOpt.isPresent()) {
+            return Result.fail();
+        }
+        User user = userOpt.get();
+        if (!PasswordUtils.isRight(oldPassword, user.getPassword())) {
+            return Result.fail(2).message("旧密码错误");
+        }
+        user.setPassword(PasswordUtils.ciphertext(newPassword));
+        user = userRepo.save(user);
+        return Result.from(user != null);
+    }
+
     @GetMapping("/not_logged_in")
     @ResponseStatus(code= HttpStatus.UNAUTHORIZED)
     public Result notLoggedIn() {

@@ -67,18 +67,16 @@ public class PackageItemOpController {
         if (!packageRepo.existsById(packageCode)) {
             return Result.fail(1).message("未查询到包裹");
         }
-
+        Optional<Item> itemOpt = itemRepo.findById(itemCode);
+        if (!itemOpt.isPresent()) {
+            return Result.fail(4).message("未查询到快件");
+        }
         Optional<Scheme> schemeOpt = schemeRepo.findById(schemeId);
         if (!schemeOpt.isPresent()) {
             return Result.fail(2).message("未知模式");
         }
-
         if (!itemCode.matches(schemeOpt.get().getItemCodePattern())) {
             return Result.fail(3).message("快件编号有误");
-        }
-        Optional<Item> itemOpt = itemRepo.findById(itemCode);
-        if (!itemOpt.isPresent()) {
-            return Result.fail(4).message("未查询到快件");
         }
         Optional<PackageItemRel> relOpt = packageItemRelRepo.findByItemCode(itemCode);
         if (relOpt.isPresent()) {

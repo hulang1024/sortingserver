@@ -81,17 +81,6 @@ public class PackageController {
         userRepo.findById(pkg.getOperator()).ifPresent(user -> details.put("creator", user));
         codedAddressRepo.findById(pkg.getDestCode()).ifPresent(address -> details.put("destAddress", address));
 
-        QPackageItemRel qPackageItemRel = QPackageItemRel.packageItemRel;
-        QItem qItem = QItem.item;
-        List<Item> items = new JPAQuery<Item>(entityManager)
-            .select(qItem)
-            .from(qItem, qPackageItemRel)
-            .where(qPackageItemRel.itemCode.eq(qItem.code))
-            .where(qPackageItemRel.packageCode.eq(code))
-            .fetchResults()
-            .getResults();
-        details.put("items", items);
-
         return details;
     }
 
