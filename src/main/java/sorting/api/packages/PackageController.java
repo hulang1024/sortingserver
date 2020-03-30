@@ -87,7 +87,7 @@ public class PackageController {
     @PostMapping
     public Result add(@RequestBody Package pkg, SmartCreateSepc smartCreateSpec, Long schemeId) {
         if (packageRepo.existsById(pkg.getCode())) {
-            return Result.fail().message("早已创建包裹");
+            return Result.fail().message("早已创建集包");
         }
         if (!codedAddressRepo.existsById(pkg.getDestCode())) {
             return Result.fail().message("未查询到目的地");
@@ -117,8 +117,8 @@ public class PackageController {
 
         Date now = new Date();
         long operator = SessionUserUtils.getUser().getId();
-        List<PackageItemRel> rels = new ArrayList<>();  // 包裹快件关联记录
-        List<PackageItemOp> opRecords = new ArrayList<>(); //包裹增加快件记录
+        List<PackageItemRel> rels = new ArrayList<>();  // 集包快件关联记录
+        List<PackageItemOp> opRecords = new ArrayList<>(); //集包增加快件记录
         for (Item item : items) {
             item.setPackTime(now);
 
@@ -148,7 +148,10 @@ public class PackageController {
     public Result delete(String code) {
         Optional<Package> pkgOpt = packageRepo.findById(code);
         if (!pkgOpt.isPresent()) {
-            return Result.fail().message("不存在的包裹");
+            return Result.fail(2).message("不存在的集包");
+        }
+        if (packageItemRelRepo.existsByPackageCode(code)) {
+            return Result.fail(3).message("集包包含快件，不能删除");
         }
         Package pkg = pkgOpt.get();
         packageRepo.deleteById(code);

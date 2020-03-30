@@ -14,10 +14,11 @@ import javax.servlet.http.HttpServletResponse;
  */
 public class RequestValidateInterceptor implements HandlerInterceptor {
     private final String[] WHITE_LIST = new String[]{
-            "/error",
-            "/user/next_code", "/user/login", "/user/logout", "/user/register",
-            "/user/login_captcha", "/user/not_logged_in", "/user/ping",
-            "/scheme/all"
+        "/error",
+        "/user/next_code", "/user/login", "/user/logout", "/user/register",
+        "/user/login_captcha", "/user/not_logged_in", "/user/ping",
+        "/app_version/latest_info", "/app_version/latest",
+        "/scheme/all"
     };
 
     @Override

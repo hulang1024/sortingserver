@@ -32,7 +32,7 @@ CREATE TABLE `package` (
   `create_at` datetime NOT NULL COMMENT '创建时间',
   `operator` int NOT NULL COMMENT '操作者（用户id）',
   PRIMARY KEY (`code`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='包裹';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='集包';
 
 -- ----------------------------
 -- Table structure for package_deleted
@@ -46,7 +46,7 @@ CREATE TABLE `package_deleted` (
   `delete_at` datetime DEFAULT NULL,
   `operator` int NOT NULL COMMENT '操作者（用户id）',
   PRIMARY KEY (`code`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='包裹删除记录';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='集包删除记录';
 
 -- ----------------------------
 -- Table structure for package_item_op
@@ -54,13 +54,13 @@ CREATE TABLE `package_deleted` (
 DROP TABLE IF EXISTS `package_item_op`;
 CREATE TABLE `package_item_op` (
   `id` int NOT NULL AUTO_INCREMENT,
-  `package_code` char(10) NOT NULL COMMENT '包裹编号',
+  `package_code` char(10) NOT NULL COMMENT '集包编号',
   `item_code` varchar(20) NOT NULL COMMENT '快件编号',
   `op_type` tinyint NOT NULL COMMENT '操作类型，1=增加快件，2=删除快件',
   `op_time` datetime NOT NULL COMMENT '操作时间',
   `operator` int NOT NULL COMMENT '操作者',
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=14 DEFAULT CHARSET=utf8 COMMENT='包裹快件操作记录';
+) ENGINE=InnoDB AUTO_INCREMENT=19 DEFAULT CHARSET=utf8 COMMENT='集包快件操作记录';
 
 -- ----------------------------
 -- Table structure for package_item_rel
@@ -68,13 +68,13 @@ CREATE TABLE `package_item_op` (
 DROP TABLE IF EXISTS `package_item_rel`;
 CREATE TABLE `package_item_rel` (
   `id` int NOT NULL AUTO_INCREMENT,
-  `package_code` char(10) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL COMMENT '包裹编号',
+  `package_code` char(10) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL COMMENT '集包编号',
   `item_code` varchar(20) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL COMMENT '物件编号',
   `create_at` datetime NOT NULL COMMENT '关联创建时间',
   `operator` int NOT NULL COMMENT '操作者（用户id）',
   PRIMARY KEY (`id`),
   UNIQUE KEY `rel_unique` (`package_code`,`item_code`)
-) ENGINE=InnoDB AUTO_INCREMENT=13 DEFAULT CHARSET=utf8 COMMENT='包裹快件关联';
+) ENGINE=InnoDB AUTO_INCREMENT=16 DEFAULT CHARSET=utf8 COMMENT='集包快件关联';
 
 -- ----------------------------
 -- Table structure for scheme
@@ -83,7 +83,7 @@ DROP TABLE IF EXISTS `scheme`;
 CREATE TABLE `scheme` (
   `id` int NOT NULL,
   `company` varchar(50) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL COMMENT '公司名称',
-  `item_code_pattern` varchar(600) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL COMMENT '快递编号验证正则表达式',
+  `item_code_pattern` varchar(600) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL COMMENT '快件编号验证正则表达式',
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
@@ -99,4 +99,4 @@ CREATE TABLE `user` (
   `password` varchar(40) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL COMMENT '登录密码',
   `create_at` datetime NOT NULL COMMENT '注册时间',
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8 COMMENT='用户';
+) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8 COMMENT='用户';

@@ -54,6 +54,9 @@ public class PackageItemOpController {
         if (!StringUtils.equals(params.get("fromAll"), "1")) {
             query.where(qPackageItemOp.operator.eq(SessionUserUtils.getUser().getId()));
         }
+        if (StringUtils.isNotEmpty(params.get("opType"))) {
+            query.where(qPackageItemOp.opType.eq(Integer.parseInt(params.get("opType"))));
+        }
         if (StringUtils.isNotEmpty(params.get("packageCode"))) {
             query.where(qPackageItemOp.packageCode.like(params.get("packageCode") + "%"));
         }
@@ -65,7 +68,7 @@ public class PackageItemOpController {
     @Transactional
     public Result addItem(String packageCode, String itemCode, Long schemeId) {
         if (!packageRepo.existsById(packageCode)) {
-            return Result.fail(1).message("未查询到包裹");
+            return Result.fail(1).message("未查询到集包");
         }
         Optional<Item> itemOpt = itemRepo.findById(itemCode);
         if (!itemOpt.isPresent()) {
@@ -81,9 +84,9 @@ public class PackageItemOpController {
         Optional<PackageItemRel> relOpt = packageItemRelRepo.findByItemCode(itemCode);
         if (relOpt.isPresent()) {
             if (relOpt.get().getPackageCode().equals(packageCode)) {
-                return Result.fail(5).message("快件早已加到包裹");
+                return Result.fail(5).message("快件早已加到集包");
             } else {
-                return Result.fail(5).message("快件早已加到其它包裹");
+                return Result.fail(5).message("快件早已加到其它集包");
             }
         }
 
@@ -111,7 +114,7 @@ public class PackageItemOpController {
     @Transactional
     public Result deleteItem(String packageCode, String itemCode) {
         if (!packageRepo.existsById(packageCode)) {
-            return Result.fail(1).message("未查询到包裹");
+            return Result.fail(1).message("未查询到集包");
         }
 
         Optional<Item> itemOpt = itemRepo.findById(itemCode);
@@ -120,7 +123,7 @@ public class PackageItemOpController {
         }
         if (itemOpt.get().getPackTime() == null
             || !packageItemRelRepo.existsByPackageCodeAndItemCode(packageCode, itemCode)) {
-            return Result.fail(5).message("包裹未加快件");
+            return Result.fail(5).message("集包未加快件");
         }
 
         packageItemRelRepo.deleteByPackageCodeAndItemCode(packageCode, itemCode);

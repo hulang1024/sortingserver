@@ -8,5 +8,6 @@ public interface PackageItemRelRepo extends CrudRepository<PackageItemRel, Strin
     void deleteByPackageCode(String s);
     void deleteByPackageCodeAndItemCode(String packageCode, String itemCode);
     boolean existsByPackageCodeAndItemCode(String packageCode, String itemCode);
+    boolean existsByPackageCode(String packageCode);
     Optional<PackageItemRel> findByItemCode(String itemCode);
 }

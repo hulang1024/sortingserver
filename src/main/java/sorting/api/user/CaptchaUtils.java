@@ -9,7 +9,7 @@ public class CaptchaUtils {
         Graphics2D graphics = (Graphics2D) verifyImg.getGraphics();
         graphics.setColor(Color.WHITE);//设置画笔颜色-验证码背景色
         graphics.fillRect(0, 0, width, height);//填充背景
-        graphics.setFont(new Font("微软雅黑", Font.BOLD, 40));
+        graphics.setFont(new Font("微软雅黑", Font.BOLD, 32));
         //数字和字母的组合
         String baseNumLetter = "123456789";
         StringBuilder sBuffer = new StringBuilder();
@@ -28,7 +28,7 @@ public class CaptchaUtils {
             //反向旋转
             graphics.rotate(-degree * Math.PI / 180, x, 45);
 
-            x += 38;
+            x += 32;
         }
 
         //画干扰线
