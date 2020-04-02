@@ -15,6 +15,7 @@ public class User {
     @Id
     private Long id;
     private String code;
+    private String branchCode;
     private String name;
     private String phone;
     private String password;

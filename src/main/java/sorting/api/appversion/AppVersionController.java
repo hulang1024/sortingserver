@@ -18,10 +18,9 @@ public class AppVersionController {
     public Result getLatestVersionInfo(HttpServletRequest request) {
         File releaseDir = new File("E:\\work\\sortingserver\\target\\classes\\release");
         File[] files = releaseDir.listFiles();
-        if (files != null && files.length == 0) {
+        if (files == null || files.length == 0) {
             return Result.fail(1);
         }
-        assert files != null;
         String fileName = files[0].getName();
         Map<String, Object> versionInfo = new HashMap<>();
         versionInfo.put("version", fileName.substring(0, fileName.length() - 4));
@@ -34,13 +33,12 @@ public class AppVersionController {
     public void latest(HttpServletResponse response) {
         File releaseDir = new File("E:\\work\\sortingserver\\target\\classes\\release");
         File[] files = releaseDir.listFiles();
-        if (files != null && files.length == 0) {
+        if (files == null || files.length == 0) {
             return;
         }
 
         try {
             InputStream in = null;
-            assert files != null;
             in = new BufferedInputStream(new FileInputStream(files[0]));
             response.setContentType("application/octet-stream");
             response.setContentLength(in.available());

@@ -26,11 +26,12 @@ public class UserController {
     /**
      * 登录
      * @param username 用户名
+     * @param branchCode 网点编码
      * @param password 密码
      * @param captcha  验证码
      */
     @PostMapping("/login")
-    public Result login(String username, String password, String captcha, HttpSession session) {
+    public Result login(String username, String branchCode, String password, String captcha, HttpSession session) {
         String sessionCaptcha = (String)session.getAttribute("login_captcha");
         if (!(sessionCaptcha != null && sessionCaptcha.equals(captcha))) {
             return Result.fail(2).message("验证码错误");
@@ -39,11 +40,14 @@ public class UserController {
         if (!userOpt.isPresent()) {
             return Result.fail(3).message("用户名不存在");
         }
-        if (!PasswordUtils.isRight(password, userOpt.get().getPassword())) {
+        User user = userOpt.get();
+        if (!StringUtils.equals(user.getBranchCode(), branchCode)) {
+            return Result.fail(3).message("用户名不存在");
+        }
+        if (!PasswordUtils.isRight(password, user.getPassword())) {
             return Result.fail(4).message("密码错误");
         }
 
-        User user = userOpt.get();
         session.setAttribute(Constants.SESSION_USER_KEY, user);
         session.setMaxInactiveInterval(60 * 60 * 12);
 
