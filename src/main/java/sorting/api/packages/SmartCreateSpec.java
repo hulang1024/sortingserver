@@ -3,7 +3,7 @@ package sorting.api.packages;
 import lombok.Data;
 
 @Data
-public class SmartCreateSepc {
+public class SmartCreateSpec {
     private boolean smartCreate;
     private Integer allocItemNumMax;
 }

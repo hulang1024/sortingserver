@@ -1,14 +1,18 @@
 package sorting.api.user;
 
+import javax.imageio.ImageIO;
 import java.awt.*;
 import java.awt.image.BufferedImage;
+import java.io.File;
+import java.io.IOException;
 import java.util.Random;
 
 public class CaptchaUtils {
-    public static String drawRandomText(int width, int height, BufferedImage verifyImg) {
-        Graphics2D graphics = (Graphics2D) verifyImg.getGraphics();
-        graphics.setColor(Color.WHITE);//设置画笔颜色-验证码背景色
-        graphics.fillRect(0, 0, width, height);//填充背景
+    public static String drawRandomText(int width, int height, BufferedImage image) {
+        Graphics2D graphics = image.createGraphics();
+        graphics.setColor(new Color(0xfafafa));
+        graphics.fillRect(0, 0, width, height);
+        graphics.setStroke(new BasicStroke(1f));
         graphics.setFont(new Font("微软雅黑", Font.BOLD, 32));
         //数字和字母的组合
         String baseNumLetter = "123456789";
@@ -23,10 +27,10 @@ public class CaptchaUtils {
             String ch = baseNumLetter.charAt(dot) + "";
             sBuffer.append(ch);
             //正向旋转
-            graphics.rotate(degree * Math.PI / 180, x, 45);
-            graphics.drawString(ch, x, 45);
+            graphics.rotate(degree * Math.PI / 180, x, 40);
+            graphics.drawString(ch, x, 40);
             //反向旋转
-            graphics.rotate(-degree * Math.PI / 180, x, 45);
+            graphics.rotate(-degree * Math.PI / 180, x, 40);
 
             x += 32;
         }
@@ -49,6 +53,7 @@ public class CaptchaUtils {
             graphics.setColor(getRandomColor());
             graphics.fillRect(x1, y1, 2, 2);
         }
+        graphics.dispose();
         return sBuffer.toString();
     }
 

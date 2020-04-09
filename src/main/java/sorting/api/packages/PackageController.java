@@ -6,6 +6,7 @@ import com.querydsl.jpa.impl.JPAQueryFactory;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.CollectionUtils;
 import org.springframework.web.bind.annotation.*;
 import sorting.api.codedaddress.CodedAddressRepo;
 import sorting.api.codedaddress.QCodedAddress;
@@ -17,7 +18,6 @@ import sorting.api.item.Item;
 import sorting.api.item.ItemRepo;
 import sorting.api.item.QItem;
 import sorting.api.packageitem.*;
-import sorting.api.packageitem.QPackageItemRel;
 import sorting.api.packages.deleted.DeletedPackage;
 import sorting.api.packages.deleted.DeletedPackageRepo;
 import sorting.api.user.QUser;
@@ -26,6 +26,11 @@ import sorting.api.user.UserRepo;
 
 import javax.persistence.EntityManager;
 import java.util.*;
+import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.function.Supplier;
+import java.util.function.UnaryOperator;
+import java.util.stream.Collectors;
 
 @RequestMapping("/package")
 @RestController
@@ -84,13 +89,62 @@ public class PackageController {
         return details;
     }
 
+    @PostMapping("/batch")
+    public Result batchAdd(@RequestBody List<Package> packages) {
+        Map<Integer, Collection<String>> addStatus = new HashMap<>();
+
+        Function<List<Package>, Set<String>> puckCodeFunc = pkgs ->
+            pkgs.stream().map(Package::getCode).collect(Collectors.toSet());
+
+        Set<String> codes = puckCodeFunc.apply(packages);
+        // 查询已存在集包库中的集包编码
+        QPackage qPackage = QPackage.package$;
+        List<String> existsCodes = new JPAQuery<String>(entityManager)
+            .select(qPackage.code)
+            .from(qPackage)
+            .where(qPackage.code.in(codes))
+            .fetchResults().getResults();
+        addStatus.put(2, existsCodes);//已存在
+        // 只保留不存在集包库中的集包（新的）
+        codes.removeAll(existsCodes);
+        if (!codes.isEmpty()) {
+            List<Package> newPackages = codes.stream()
+                .map(code -> packages.stream().filter(pkg -> pkg.getCode().equals(code)).findFirst().get())
+                .collect(Collectors.toList());
+
+            Set<String> destCodes = newPackages.stream().map(Package::getDestCode).collect(Collectors.toSet());
+            // 查询已存在目标地址库中的目的地编码
+            QCodedAddress qCodedAddress = QCodedAddress.codedAddress;
+            List<String> existsDestCodes = new JPAQuery<String>(entityManager)
+                .select(qCodedAddress.code)
+                .from(qCodedAddress)
+                .where(qCodedAddress.code.in(destCodes))
+                .fetchResults().getResults();
+
+            List<Package> canAddPackages = existsDestCodes.isEmpty()
+                ? null
+                : newPackages.stream()
+                    .filter(pkg -> existsDestCodes.stream().anyMatch(destCode -> destCode.equals(pkg.getDestCode())))
+                    .collect(Collectors.toList());
+            if (!CollectionUtils.isEmpty(canAddPackages)) {
+                newPackages.removeAll(canAddPackages);
+            }
+            addStatus.put(3, puckCodeFunc.apply(newPackages));//目的地无效
+            if (!CollectionUtils.isEmpty(canAddPackages)) {
+                canAddPackages = (List<Package>) packageRepo.saveAll(canAddPackages);
+                addStatus.put(0, puckCodeFunc.apply(canAddPackages));
+            }
+        }
+        return Result.ok(addStatus);
+    }
+
     @PostMapping
-    public Result add(@RequestBody Package pkg, SmartCreateSepc smartCreateSpec, Long schemeId) {
+    public Result add(@RequestBody Package pkg, SmartCreateSpec smartCreateSpec, Long schemeId) {
         if (packageRepo.existsById(pkg.getCode())) {
-            return Result.fail().message("早已创建集包");
+            return Result.fail(2).message("集包已存在");
         }
         if (!codedAddressRepo.existsById(pkg.getDestCode())) {
-            return Result.fail().message("未查询到目的地");
+            return Result.fail(3).message("未查询到目的地");
         }
 
         pkg.setOperator(SessionUserUtils.getUser().getId());
@@ -105,7 +159,7 @@ public class PackageController {
     }
 
     @Transactional
-    public Result smartAllocItems(Package pkg, SmartCreateSepc smartCreateSpec) {
+    public Result smartAllocItems(Package pkg, SmartCreateSpec smartCreateSpec) {
         // 查询出相同目的地并且还未分配的快件
         QItem qItem = QItem.item;
         List<Item> items = new JPAQueryFactory(entityManager).selectFrom(qItem)
