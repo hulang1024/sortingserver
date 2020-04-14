@@ -13,6 +13,7 @@ import sorting.api.common.Result;
 import sorting.api.item.Item;
 import sorting.api.item.ItemRepo;
 import sorting.api.packages.*;
+import sorting.api.packages.Package;
 import sorting.api.scheme.Scheme;
 import sorting.api.scheme.SchemeRepo;
 import sorting.api.user.QUser;
@@ -67,7 +68,8 @@ public class PackageItemOpController {
     @PostMapping("/add_item")
     @Transactional
     public Result addItem(String packageCode, String itemCode, Long schemeId) {
-        if (!packageRepo.existsById(packageCode)) {
+        Optional<Package> pkgOpt = packageRepo.findById(packageCode);
+        if (!pkgOpt.isPresent()) {
             return Result.fail(1).message("未查询到集包");
         }
         Optional<Item> itemOpt = itemRepo.findById(itemCode);
@@ -90,8 +92,14 @@ public class PackageItemOpController {
             }
         }
 
-        itemOpt.get().setPackTime(new Date());
-        itemRepo.save(itemOpt.get());
+        Item item = itemOpt.get();
+
+        if (!pkgOpt.get().getDestCode().equals(item.getDestCode())) {
+            return Result.fail(6).message("快件和集包的目的地编号不相同");
+        }
+
+        item.setPackTime(new Date());
+        itemRepo.save(item);
 
         PackageItemRel rel = new PackageItemRel();
         rel.setPackageCode(packageCode);

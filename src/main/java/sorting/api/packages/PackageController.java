@@ -26,10 +26,7 @@ import sorting.api.user.UserRepo;
 
 import javax.persistence.EntityManager;
 import java.util.*;
-import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.function.Supplier;
-import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
 
 @RequestMapping("/package")
