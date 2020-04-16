@@ -26,6 +26,7 @@ import sorting.api.user.UserRepo;
 
 import javax.persistence.EntityManager;
 import java.util.*;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -90,47 +91,54 @@ public class PackageController {
     public Result batchAdd(@RequestBody List<Package> packages) {
         Map<Integer, Collection<String>> addStatus = new HashMap<>();
 
-        Function<List<Package>, Set<String>> puckCodeFunc = pkgs ->
-            pkgs.stream().map(Package::getCode).collect(Collectors.toSet());
+        Function<List<Package>, List<String>> puckCodeFunc = pkgs ->
+            pkgs.stream().map(Package::getCode).collect(Collectors.toList());
+        BiFunction<Integer, List<String>, List<String>> putStatus = (status, itemCodes) -> {
+            if (!itemCodes.isEmpty()) {
+                addStatus.put(status, itemCodes);
+            }
+            return itemCodes;
+        };
 
-        Set<String> codes = puckCodeFunc.apply(packages);
+        List<String> codes = puckCodeFunc.apply(packages);
         // 查询已存在集包库中的集包编码
         QPackage qPackage = QPackage.package$;
-        List<String> existsCodes = new JPAQuery<String>(entityManager)
+        List<String> existsCodes = new JPAQuery<>(entityManager)
             .select(qPackage.code)
             .from(qPackage)
             .where(qPackage.code.in(codes))
             .fetchResults().getResults();
-        addStatus.put(2, existsCodes);//已存在
+        putStatus.apply(2, existsCodes);//已存在
         // 只保留不存在集包库中的集包（新的）
         codes.removeAll(existsCodes);
-        if (!codes.isEmpty()) {
-            List<Package> newPackages = codes.stream()
-                .map(code -> packages.stream().filter(pkg -> pkg.getCode().equals(code)).findFirst().get())
+        if (codes.isEmpty()) {
+            return Result.ok(addStatus);
+        }
+        List<Package> newPackages = codes.stream()
+            .map(code -> packages.stream().filter(pkg -> pkg.getCode().equals(code)).findFirst().get())
+            .collect(Collectors.toList());
+
+        Set<String> destCodes = newPackages.stream().map(Package::getDestCode).collect(Collectors.toSet());
+        // 查询已存在目标地址库中的目的地编码
+        QCodedAddress qCodedAddress = QCodedAddress.codedAddress;
+        List<String> existsDestCodes = new JPAQuery<>(entityManager)
+            .select(qCodedAddress.code)
+            .from(qCodedAddress)
+            .where(qCodedAddress.code.in(destCodes))
+            .fetchResults().getResults();
+
+        List<Package> canAddPackages = existsDestCodes.isEmpty()
+            ? null
+            : newPackages.stream()
+                .filter(pkg -> existsDestCodes.stream().anyMatch(destCode -> destCode.equals(pkg.getDestCode())))
                 .collect(Collectors.toList());
-
-            Set<String> destCodes = newPackages.stream().map(Package::getDestCode).collect(Collectors.toSet());
-            // 查询已存在目标地址库中的目的地编码
-            QCodedAddress qCodedAddress = QCodedAddress.codedAddress;
-            List<String> existsDestCodes = new JPAQuery<String>(entityManager)
-                .select(qCodedAddress.code)
-                .from(qCodedAddress)
-                .where(qCodedAddress.code.in(destCodes))
-                .fetchResults().getResults();
-
-            List<Package> canAddPackages = existsDestCodes.isEmpty()
-                ? null
-                : newPackages.stream()
-                    .filter(pkg -> existsDestCodes.stream().anyMatch(destCode -> destCode.equals(pkg.getDestCode())))
-                    .collect(Collectors.toList());
-            if (!CollectionUtils.isEmpty(canAddPackages)) {
-                newPackages.removeAll(canAddPackages);
-            }
-            addStatus.put(3, puckCodeFunc.apply(newPackages));//目的地无效
-            if (!CollectionUtils.isEmpty(canAddPackages)) {
-                canAddPackages = (List<Package>) packageRepo.saveAll(canAddPackages);
-                addStatus.put(0, puckCodeFunc.apply(canAddPackages));
-            }
+        if (!CollectionUtils.isEmpty(canAddPackages)) {
+            newPackages.removeAll(canAddPackages);
+        }
+        putStatus.apply(3, puckCodeFunc.apply(newPackages));//目的地无效
+        if (!CollectionUtils.isEmpty(canAddPackages)) {
+            canAddPackages = (List<Package>) packageRepo.saveAll(canAddPackages);
+            putStatus.apply(0, puckCodeFunc.apply(canAddPackages));
         }
         return Result.ok(addStatus);
     }
