@@ -13,8 +13,9 @@ import sorting.api.common.Result;
 import sorting.api.item.Item;
 import sorting.api.item.ItemRepo;
 import sorting.api.item.QItem;
-import sorting.api.packages.*;
 import sorting.api.packages.Package;
+import sorting.api.packages.PackageRepo;
+import sorting.api.packages.QPackage;
 import sorting.api.scheme.Scheme;
 import sorting.api.scheme.SchemeRepo;
 import sorting.api.user.QUser;
@@ -23,8 +24,6 @@ import sorting.api.user.SessionUserUtils;
 import javax.persistence.EntityManager;
 import java.util.*;
 import java.util.function.BiFunction;
-import java.util.function.BinaryOperator;
-import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -185,7 +184,7 @@ public class PackageItemOpController {
         Map<String, Item> itemMap = new HashMap<>();
         QItem qItem = QItem.item;
         new JPAQuery<>(entityManager)
-            .select(Projections.bean(Item.class, qItem.code, qItem.destCode)).from(qItem)
+            .select(qItem).from(qItem)
             .where(qItem.code.in(itemCodes))
             .fetchResults().getResults()
             .forEach(item -> {
@@ -227,6 +226,10 @@ public class PackageItemOpController {
             .forEach(pkg -> {
                 packageMap.put(pkg.getCode(), pkg);
             });
+        // 过滤出不存在集包库中的集包的关系的快件编号
+        putStatus.apply(5, puckItemCodeFunc.apply(relations.stream()
+            .filter(rel -> !packageMap.containsKey(rel.getPackageCode()))
+            .collect(Collectors.toList())));
         relations.removeIf(rel -> !packageMap.containsKey(rel.getPackageCode()));
 
         // 查询目的地不同的快件编号
@@ -239,20 +242,28 @@ public class PackageItemOpController {
                 itemMap.remove(rel.getItemCode());
             }
         }
-        putStatus.apply(5, destCodeDiffItemCodes);
+        putStatus.apply(6, destCodeDiffItemCodes);
         relations.removeIf(rel -> !itemMap.containsKey(rel.getItemCode()));
         if (relations.isEmpty()) {
             return result;
         }
 
         relations = (List<PackageItemRel>) packageItemRelRepo.saveAll(relations);
+        Date now = new Date();
+        long operator = SessionUserUtils.getUser().getId();
         List<PackageItemOp> opRecords = relations.stream().map(rel -> PackageItemOp.builder()
             .packageCode(rel.getPackageCode())
             .itemCode(rel.getItemCode())
+            .opTime(now)
             .opType(1)
+            .operator(operator)
             .build()
         ).collect(Collectors.toList());
         packageItemOpRepo.saveAll(opRecords);
+        itemMap.forEach((code, item) -> {
+            item.setPackTime(now);
+        });
+        itemRepo.saveAll(itemMap.values());
         putStatus.apply(0, puckItemCodeFunc.apply(relations));
         return result;
     }
