@@ -126,7 +126,7 @@ public class UserController {
         return Result.from(user != null);
     }
 
-    @GetMapping("/not_logged_in")
+    @RequestMapping("/not_logged_in")
     @ResponseStatus(code= HttpStatus.UNAUTHORIZED)
     public Result notLoggedIn() {
         return Result.fail().message("未登录，无效的请求");

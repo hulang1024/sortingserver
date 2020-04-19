@@ -1,6 +1,8 @@
 package sorting.api.packages;
 
+import com.querydsl.core.Tuple;
 import com.querydsl.core.types.Projections;
+import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQuery;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import org.apache.commons.lang3.StringUtils;
@@ -90,15 +92,15 @@ public class PackageController {
     @PostMapping("/batch")
     public Result batchAdd(@RequestBody List<Package> packages) {
         Map<Integer, Collection<String>> addStatus = new HashMap<>();
-
-        Function<List<Package>, List<String>> puckCodeFunc = pkgs ->
-            pkgs.stream().map(Package::getCode).collect(Collectors.toList());
         BiFunction<Integer, List<String>, List<String>> putStatus = (status, itemCodes) -> {
             if (!itemCodes.isEmpty()) {
                 addStatus.put(status, itemCodes);
             }
             return itemCodes;
         };
+
+        Function<List<Package>, List<String>> puckCodeFunc = pkgs ->
+            pkgs.stream().map(Package::getCode).collect(Collectors.toList());
 
         List<String> codes = puckCodeFunc.apply(packages);
         // 查询已存在集包库中的集包编码
@@ -141,6 +143,77 @@ public class PackageController {
             putStatus.apply(0, puckCodeFunc.apply(canAddPackages));
         }
         return Result.ok(addStatus);
+    }
+
+    @PostMapping("/batch_delete")
+    @Transactional
+    public Result batchDelete(@RequestBody List<DeletedPackage> packages) {
+        final Result result = Result.ok(new HashMap<Integer, List<String>>());
+        BiFunction<Integer, List<String>, List<String>> putStatus = (status, itemCodes) -> {
+            if (!itemCodes.isEmpty()) {
+                ((Map<Integer, List<String>>)result.getData()).put(status, itemCodes);
+            }
+            return itemCodes;
+        };
+
+        List<String> packageCodes = packages.stream().map(DeletedPackage::getCode).collect(Collectors.toList());
+        // 查询已存在集包库中的集包编码和关联快件的数量
+        QPackage qPackage = QPackage.package$;
+        QPackageItemRel qPackageItemRel = QPackageItemRel.packageItemRel;
+        Map<String, Tuple> existsPackageInfoMap = new HashMap<>();
+        List<String> hasItemsPackageCodes = new ArrayList<>(); //已关联快件的
+        new JPAQuery<>(entityManager)
+            .select(
+                Projections.tuple(
+                    qPackage.code,
+                    qPackage.destCode,
+                    qPackage.operator,
+                    qPackage.createAt,
+                    JPAExpressions
+                        .select(qPackageItemRel.itemCode.count())
+                        .from(qPackageItemRel)
+                        .where(qPackageItemRel.packageCode.eq(qPackage.code))))
+            .from(qPackage)
+            .where(qPackage.code.in(packageCodes))
+            .fetchResults().getResults()
+            .forEach(stat -> {
+                String packageCode = stat.get(0, String.class);
+                int items = stat.get(4, Long.class).intValue();
+                existsPackageInfoMap.put(packageCode, stat);
+                if (items > 0) {
+                    hasItemsPackageCodes.add(packageCode);
+                }
+            });
+        putStatus.apply(2, hasItemsPackageCodes);
+        putStatus.apply(3, packageCodes.stream()
+            .filter(code -> !existsPackageInfoMap.containsKey(code))
+            .collect(Collectors.toList()));
+        packageCodes.removeIf(code -> !existsPackageInfoMap.containsKey(code));
+        packageCodes.removeAll(hasItemsPackageCodes);
+        if (packageCodes.isEmpty()) {
+            return result;
+        }
+
+        packages.removeIf(pkg -> !packageCodes.contains(pkg.getCode()));
+        List<DeletedPackage> deletedPackages = packages.stream().map(pkg -> {
+            pkg.setDestCode(existsPackageInfoMap.get(pkg.getCode()).get(1, String.class));
+            pkg.setCreator(existsPackageInfoMap.get(pkg.getCode()).get(2, Long.class));
+            pkg.setCreateAt(existsPackageInfoMap.get(pkg.getCode()).get(3, Date.class));
+            return pkg;
+        }).collect(Collectors.toList());
+        deletedPackageRepo.saveAll(deletedPackages);
+
+        packageRepo.deleteAll(packages.stream()
+            .map(delPkg -> {
+                Package pkg = new Package();
+                pkg.setCode(delPkg.getCode());
+                return pkg;
+            })
+            .collect(Collectors.toList()));
+
+        putStatus.apply(0, packageCodes);
+
+        return result;
     }
 
     @PostMapping
@@ -214,7 +287,6 @@ public class PackageController {
         }
         Package pkg = pkgOpt.get();
         packageRepo.deleteById(code);
-        packageItemRelRepo.deleteByPackageCode(code);
         DeletedPackage deletedPackage = new DeletedPackage();
         deletedPackage.setCode(pkg.getCode());
         deletedPackage.setDestCode(pkg.getDestCode());

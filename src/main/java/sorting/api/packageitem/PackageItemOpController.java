@@ -158,15 +158,15 @@ public class PackageItemOpController {
         }
 
         final Result result = Result.ok(new HashMap<Integer, List<String>>());
-
-        Function<List<PackageItemRel>, List<String>> puckItemCodeFunc = rs ->
-            rs.stream().map(PackageItemRel::getItemCode).collect(Collectors.toList());
         BiFunction<Integer, List<String>, List<String>> putStatus = (status, itemCodes) -> {
             if (!itemCodes.isEmpty()) {
                 ((Map<Integer, List<String>>)result.getData()).put(status, itemCodes);
             }
             return itemCodes;
         };
+
+        Function<List<PackageItemRel>, List<String>> puckItemCodeFunc = rs ->
+            rs.stream().map(PackageItemRel::getItemCode).collect(Collectors.toList());
 
         List<String> itemCodes = puckItemCodeFunc.apply(relations);
 
