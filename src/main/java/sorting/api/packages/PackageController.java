@@ -90,7 +90,7 @@ public class PackageController {
     }
 
     @PostMapping("/batch")
-    public Result batchAdd(@RequestBody List<Package> packages) {
+    public Result batchAdd(@RequestBody List<Package> packages, SmartCreateSpec smartCreateSpec) {
         Map<Integer, Collection<String>> addStatus = new HashMap<>();
         BiFunction<Integer, List<String>, List<String>> putStatus = (status, itemCodes) -> {
             if (!itemCodes.isEmpty()) {
@@ -141,7 +141,12 @@ public class PackageController {
         if (!CollectionUtils.isEmpty(canAddPackages)) {
             canAddPackages = (List<Package>) packageRepo.saveAll(canAddPackages);
             putStatus.apply(0, puckCodeFunc.apply(canAddPackages));
+
+            if (smartCreateSpec.isSmartCreate()) {
+                batchSmartAllocItems(canAddPackages, smartCreateSpec);
+            }
         }
+
         return Result.ok(addStatus);
     }
 
@@ -237,45 +242,6 @@ public class PackageController {
     }
 
     @Transactional
-    public Result smartAllocItems(Package pkg, SmartCreateSpec smartCreateSpec) {
-        // 查询出相同目的地并且还未分配的快件
-        QItem qItem = QItem.item;
-        List<Item> items = new JPAQueryFactory(entityManager).selectFrom(qItem)
-            .where(qItem.packTime.isNull().and(qItem.destCode.eq(pkg.getDestCode())))
-            .offset(0)
-            .limit(smartCreateSpec.getAllocItemNumMax())
-            .fetchResults()
-            .getResults();
-
-        Date now = new Date();
-        long operator = SessionUserUtils.getUser().getId();
-        List<PackageItemRel> rels = new ArrayList<>();  // 集包快件关联记录
-        List<PackageItemOp> opRecords = new ArrayList<>(); //集包增加快件记录
-        for (Item item : items) {
-            item.setPackTime(now);
-
-            PackageItemRel rel = new PackageItemRel();
-            rel.setPackageCode(pkg.getCode());
-            rel.setItemCode(item.getCode());
-            rel.setOperator(operator);
-            rel.setCreateAt(now);
-            rels.add(rel);
-
-            PackageItemOp op = new PackageItemOp();
-            op.setPackageCode(pkg.getCode());
-            op.setItemCode(item.getCode());
-            op.setOperator(operator);
-            op.setOpTime(now);
-            op.setOpType(1);
-            opRecords.add(op);
-        }
-        packageItemRelRepo.saveAll(rels);
-        packageItemOpRepo.saveAll(opRecords);
-        itemRepo.saveAll(items);
-        return Result.ok();
-    }
-
-    @Transactional
     @DeleteMapping
     public Result delete(String code) {
         Optional<Package> pkgOpt = packageRepo.findById(code);
@@ -296,5 +262,111 @@ public class PackageController {
         deletedPackage.setDeleteAt(new Date());
         deletedPackage = deletedPackageRepo.save(deletedPackage);
         return Result.from(deletedPackage != null);
+    }
+
+    @Transactional
+    public Result smartAllocItems(Package pkg, SmartCreateSpec smartCreateSpec) {
+        // 查询出相同目的地并且还未分配的快件
+        QItem qItem = QItem.item;
+        List<Item> items = new JPAQueryFactory(entityManager).selectFrom(qItem)
+            .where(qItem.packTime.isNull().and(qItem.destCode.eq(pkg.getDestCode())))
+            .offset(0)
+            .limit(smartCreateSpec.getAllocItemNumMax())
+            .fetchResults()
+            .getResults();
+        items.sort(Comparator.comparing(Item::getCreateAt));
+
+        if (items.isEmpty()) {
+            return Result.ok();
+        }
+
+        List<PackageItemRel> relations = new ArrayList<>();  // 集包快件关联记录
+        List<PackageItemOp> opRecords = new ArrayList<>(); //集包增加快件记录
+
+        for (Item item : items) {
+            item.setPackTime(pkg.getCreateAt());
+
+            PackageItemRel rel = new PackageItemRel();
+            rel.setPackageCode(pkg.getCode());
+            rel.setItemCode(item.getCode());
+            rel.setOperator(pkg.getOperator());
+            rel.setCreateAt(pkg.getCreateAt());
+            relations.add(rel);
+
+            PackageItemOp op = new PackageItemOp();
+            op.setPackageCode(pkg.getCode());
+            op.setItemCode(item.getCode());
+            op.setOperator(pkg.getOperator());
+            op.setOpTime(pkg.getCreateAt());
+            op.setOpType(1);
+            opRecords.add(op);
+        }
+        packageItemRelRepo.saveAll(relations);
+        packageItemOpRepo.saveAll(opRecords);
+        itemRepo.saveAll(items);
+        return Result.ok();
+    }
+
+    @Transactional
+    public Result batchSmartAllocItems(List<Package> packages, SmartCreateSpec smartCreateSpec) {
+        // 查询出相同目的地并且还未分配的快件
+        Map<String, Stack<Item>> itemsMap = new HashMap<>();
+        QItem qItem = QItem.item;
+        List<Item> items = new JPAQueryFactory(entityManager).selectFrom(qItem)
+            .where(qItem.packTime.isNull()
+                .and(qItem.destCode.in(packages.stream().map(Package::getDestCode).collect(Collectors.toSet()))))
+            .offset(0)
+            .limit(smartCreateSpec.getAllocItemNumMax() * packages.size())
+            .fetchResults()
+            .getResults();
+        items.forEach(item -> {
+            Stack<Item> itemStack = itemsMap.get(item.getDestCode());
+            if (itemStack == null) {
+                itemStack = new Stack<>();
+                itemsMap.put(item.getDestCode(), itemStack);
+            }
+            itemStack.push(item);
+        });
+
+        if (itemsMap.isEmpty()) {
+            return Result.ok();
+        }
+
+        Date now = new Date();
+        List<PackageItemRel> relations = new ArrayList<>();  // 集包快件关联记录
+        List<PackageItemOp> opRecords = new ArrayList<>(); //集包增加快件记录
+
+        packages.sort(Comparator.comparing(Package::getCreateAt));//按创建时间升序排序,早创建的集包先分配快件
+        for (Package pkg : packages) {
+            for (int n = 0; n < smartCreateSpec.getAllocItemNumMax(); n++) {
+                Stack<Item> sameDestItems = itemsMap.get(pkg.getDestCode());
+                if (sameDestItems == null || sameDestItems.isEmpty()) {
+                    break;
+                }
+                Item item = sameDestItems.pop();
+
+                item.setPackTime(now);
+
+                PackageItemRel rel = new PackageItemRel();
+                rel.setPackageCode(pkg.getCode());
+                rel.setItemCode(item.getCode());
+                rel.setOperator(pkg.getOperator());
+                rel.setCreateAt(now);
+                relations.add(rel);
+
+                PackageItemOp op = new PackageItemOp();
+                op.setPackageCode(pkg.getCode());
+                op.setItemCode(item.getCode());
+                op.setOperator(pkg.getOperator());
+                op.setOpTime(now);
+                op.setOpType(1);
+                opRecords.add(op);
+            }
+        }
+
+        packageItemRelRepo.saveAll(relations);
+        packageItemOpRepo.saveAll(opRecords);
+        itemRepo.saveAll(items);
+        return Result.ok();
     }
 }
