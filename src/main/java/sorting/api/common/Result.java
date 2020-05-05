@@ -1,6 +1,5 @@
 package sorting.api.common;
 
-import lombok.AllArgsConstructor;
 import lombok.Data;
 
 /**

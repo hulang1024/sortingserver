@@ -9,7 +9,6 @@ import sorting.api.codedaddress.CodedAddressRepo;
 import sorting.api.common.Page;
 import sorting.api.common.PageParams;
 import sorting.api.common.PageUtils;
-import sorting.api.packages.Package;
 import sorting.api.user.SessionUserUtils;
 import sorting.api.user.UserRepo;
 

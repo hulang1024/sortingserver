@@ -16,7 +16,7 @@ import java.util.Map;
 public class AppVersionController {
     @GetMapping("/latest_info")
     public Result getLatestVersionInfo(HttpServletRequest request) {
-        File releaseDir = new File("E:\\work\\sortingserver\\target\\classes\\release");
+        File releaseDir = new File(getAppFilePath());
         File[] files = releaseDir.listFiles();
         if (files == null || files.length == 0) {
             return Result.fail(1);
@@ -31,7 +31,7 @@ public class AppVersionController {
 
     @GetMapping("/latest")
     public void latest(HttpServletResponse response) {
-        File releaseDir = new File("E:\\work\\sortingserver\\target\\classes\\release");
+        File releaseDir = new File(getAppFilePath());
         File[] files = releaseDir.listFiles();
         if (files == null || files.length == 0) {
             return;
@@ -51,5 +51,10 @@ public class AppVersionController {
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    private String getAppFilePath() {
+        String jarPath = AppVersionController.class.getProtectionDomain().getCodeSource().getLocation().getPath();
+        return jarPath.substring(0, jarPath.lastIndexOf('/')).concat("/release");
     }
 }
