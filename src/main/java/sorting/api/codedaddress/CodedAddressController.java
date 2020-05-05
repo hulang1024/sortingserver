@@ -11,6 +11,11 @@ public class CodedAddressController {
     @Autowired
     private CodedAddressRepo codedAddressRepo;
 
+    @GetMapping("/count")
+    public long count() {
+        return codedAddressRepo.count();
+    }
+
     @GetMapping("/all")
     public Iterable<CodedAddress> all(String code) {
         return codedAddressRepo.findAll();
