@@ -25,4 +25,10 @@ public class PackageItemOp {
     private int opType;
     private Date opTime;
     private Long operator;
+
+    @Override
+    public boolean equals(Object other) {
+        if (!(other instanceof PackageItemOp)) return false;
+        return ((PackageItemOp) other).id.equals(this.id);
+    }
 }
